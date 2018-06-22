@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Add layer | CARTO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<!-- Include CARTO VL JS -->
+<script src="https://libs.cartocdn.com/carto-vl/v0.5.0-beta.2/carto-vl.min.js"></script>
+<!-- Include Mapbox GL JS -->
+<script src="https://libs.cartocdn.com/mapbox-gl/v0.45.0-carto1/mapbox-gl.js"></script>
+<!-- Include Mapbox GL CSS -->
+<link href="https://libs.cartocdn.com/mapbox-gl/v0.45.0-carto1/mapbox-gl.css" rel="stylesheet" />
+<link href="https://carto.com/developers/carto-vl/examples/maps/style.css" rel="stylesheet">
+</head>
+<body>
+<div id="map"></div>
+<aside class="toolbox">
+<div class="box">
+<header>
+  <h1>Add layer</h1>
+</header>
+<section>
+  <p class="description open-sans">Add one CARTO layer to your map</p>
+    <div id="controls">
+            <ul>
+              <li>
+                <select onchange="countryselector(this.value)">
+                  <option value="Morocco">Morocco</option>
+                  <option value="Spain">Spain</option>
+                  <option value="England">England</option>
+                  <option value="Peru">Peru</option>
+                  <option value="All">All</option>
+                </select>
+              </li>
+            </ul>
+          </div></section>
+<footer class="js-footer"></footer>
+</div>
+</aside>
+<div id="loader">
+<div class="CDB-LoaderIcon CDB-LoaderIcon--big">
+<svg class="CDB-LoaderIcon-spinner" viewBox="0 0 50 50">
+  <circle class="CDB-LoaderIcon-path" cx="25" cy="25" r="20" fill="none"></circle>
+</svg>
+</div>
+</div>
+<script>
+function countryselector(val){
+  if (val=="All"){
+    const selectorall2 = new carto.Viz(`
+      color: opacity(ramp($country,prism),0.5)
+      `);
+      const selectorall1 = new carto.Viz(`
+        color: opacity(ramp($country,prism),0.5)
+        `);
+      layer2.blendToViz(selectorall2);
+      layer.blendToViz(selectorall1);
+      return
+  }
+  var selectedCountry = val;
+  var selector = new carto.Viz(`
+    color: opacity(ramp($country,prism),0.5)
+    filter: $country=="${selectedCountry}"
+    `)
+  var selector2 = new carto.Viz(`
+      color: opacity(ramp($country,prism),0.5)
+      filter: $country=="${selectedCountry}"
+      `)
+  layer2.blendToViz(selector2);
+  layer.blendToViz(selector);
+  };
+const map = new mapboxgl.Map({
+container: 'map',
+style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+center: [0, 30],
+zoom: 2,
+
+});
+
+// Define user
+carto.setDefaultAuth({
+user: 'jcorral-carto',
+apiKey: 'default_public'
+});
+
+// Define layer
+
+const source = new carto.source.SQL(`SELECT
+  *,
+  ST_Length(the_geom::geography) / 1000 AS length
+FROM (
+  SELECT
+    st_transform(
+    ST_MakeLine(
+      the_geom,
+      ST_SetSRID(
+        ST_MakePoint(
+          37.553611,
+          55.715833
+        ),
+        4326
+      )
+    ),3857) AS the_geom_webmercator,
+    ST_MakeLine(
+      the_geom,
+      ST_SetSRID(
+        ST_MakePoint(
+          37.553611,
+          55.715833
+        ),
+        4326
+      )
+    ) AS the_geom,
+    cartodb_id, position, name, club, club_country, club_city, country, destination_country, destination_city
+  FROM (SELECT * FROM "jcorral-carto".world_cup_world_cup_1_1) _line_analysis
+) _cdb_analysis_line_to_single_point`);
+const viz = new carto.Viz(`
+  color: opacity(ramp($country,prism),0.5)
+  `);
+const layer = new carto.Layer('layer', source, viz);
+const source2 = new carto.source.Dataset(`"jcorral-carto".world_cup_world_cup_1_1`)
+const viz2 = new carto.Viz(`
+  color: opacity(ramp($country,prism),0.5)
+  `);
+  const layer2 = new carto.Layer('layer2', source2, viz2);
+  layer2.addTo(map, 'watername_ocean');
+layer.addTo(map, 'watername_ocean');
+layer.on('loaded', hideLoader);
+const $controls = document.getElementById('controls');
+$controls.addEventListener('change', function (e) {
+   selector = e.target.options[e.target.options.selectedIndex].value;
+   viz2.variables.selector = selector;
+});
+
+function hideLoader() {
+document.getElementById('loader').style.opacity = '0';
+}
+</script>
+</body>
+</html>
